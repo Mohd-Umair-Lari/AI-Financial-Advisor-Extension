@@ -1,0 +1,45 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Financial Advisor</title>
+  <!-- 
+    NOTE: To run this application locally, you MUST use a local web server 
+    (e.g., VS Code Live Server, 'npx serve', or 'python -m http.server').
+    Opening the file directly via file:// will trigger CORS errors due to ES Modules.
+  -->
+  <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fdfdfd;
+    }
+    .sankey-node rect {
+      cursor: move;
+      fill-opacity: 0.9;
+      shape-rendering: crispEdges;
+    }
+    .sankey-node text {
+      pointer-events: none;
+      font-size: 11px;
+      font-weight: 600;
+      fill: #1e293b;
+    }
+    .sankey-link {
+      fill: none;
+      stroke: #000;
+      stroke-opacity: 0.1;
+    }
+    .sankey-link:hover {
+      stroke-opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="index.tsx"></script>
+</body>
+</html>

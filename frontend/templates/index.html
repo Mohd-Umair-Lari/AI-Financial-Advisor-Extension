@@ -1,0 +1,400 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Financial Advisor | Wealth Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .sankey-node rect { fill-opacity: 0.9; shape-rendering: crispEdges; }
+        .sankey-node text { pointer-events: none; font-size: 10px; font-weight: 700; fill: #334155; }
+        .sankey-link { fill: none; stroke: #cbd5e1; stroke-opacity: 0.2; transition: stroke-opacity 0.2s; }
+        .sankey-link:hover { stroke-opacity: 0.5; }
+        .loader {
+            border-top-color: #4f46e5;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky top-0 h-screen">
+            <div class="p-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                        <i data-lucide="sparkles"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-extrabold leading-none">AI-Financial</h1>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Advisor</p>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 px-4 space-y-1">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold">
+                    <i data-lucide="layout-dashboard" size="20"></i> Dashboard
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-semibold transition-all">
+                    <i data-lucide="pie-chart" size="20"></i> Cash Flow
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-semibold transition-all">
+                    <i data-lucide="file-text" size="20"></i> Wealth Reports
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-semibold transition-all">
+                    <i data-lucide="user" size="20"></i> Profile
+                </a>
+            </nav>
+            <div class="p-6 border-t border-slate-100">
+                <div id="user-profile-card" class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold" id="user-initial">A</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold truncate" id="user-name">Loading...</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase truncate" id="user-email">...</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
+            <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                <div>
+                    <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">Wealth Overview</h2>
+                    <p class="text-slate-500 font-medium">Real-time financial health and AI-driven strategy.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Live Analysis</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10" id="metrics-grid">
+                <!-- Metrics will be injected here -->
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Left Column -->
+                <div class="lg:col-span-8 space-y-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Cash Flow Pie Chart -->
+                        <div class="glass-card p-6 rounded-3xl shadow-sm">
+                            <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+                                <i data-lucide="zap" class="text-amber-500" size="18"></i> Monthly Cash Flow
+                            </h3>
+                            <div id="pie-chart-container" class="h-64 flex items-center justify-center">
+                                <svg id="cash-flow-pie"></svg>
+                            </div>
+                            <div id="pie-legend" class="mt-6 grid grid-cols-3 gap-2 text-center border-t border-slate-50 pt-4"></div>
+                        </div>
+
+                        <!-- Goal Progress -->
+                        <div class="glass-card p-6 rounded-3xl shadow-sm flex flex-col">
+                            <h3 class="text-lg font-bold mb-6" id="goal-title">Goal Progress</h3>
+                            <div class="flex-1 flex flex-col justify-center">
+                                <div class="relative pt-1 mb-6">
+                                    <div class="flex mb-4 items-center justify-between">
+                                        <span class="text-xs font-bold py-1 px-3 uppercase rounded-full text-indigo-600 bg-indigo-50" id="goal-percent">0%</span>
+                                        <span class="text-sm font-bold text-slate-400" id="goal-target-amt">₹0</span>
+                                    </div>
+                                    <div class="overflow-hidden h-4 mb-4 text-xs flex rounded-full bg-slate-100">
+                                        <div id="goal-progress-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-600 transition-all duration-1000" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <p class="text-sm text-slate-600 leading-relaxed" id="goal-status-text">Calculating trajectory...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sankey Diagram -->
+                    <div class="glass-card p-8 rounded-3xl shadow-sm">
+                        <div class="flex items-center justify-between mb-8">
+                            <h3 class="text-lg font-bold">Income Distribution Flow</h3>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sankey Visualization</span>
+                        </div>
+                        <div id="sankey-container" class="w-full overflow-x-auto">
+                            <svg id="sankey-chart"></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: AI Insights -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-800 relative overflow-hidden">
+                        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl"></div>
+                        
+                        <div class="flex items-center gap-4 mb-10 relative z-10">
+                            <div class="p-3 bg-indigo-500/20 rounded-2xl">
+                                <i data-lucide="lightbulb" class="text-indigo-400" size="28"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold tracking-tight">AI Advisor</h3>
+                                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Smart Insights</p>
+                            </div>
+                        </div>
+
+                        <div id="insights-container" class="space-y-4 relative z-10">
+                            <!-- Insights will be injected here -->
+                            <div class="flex flex-col items-center justify-center py-12 text-slate-500">
+                                <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-800 h-10 w-10 mb-4"></div>
+                                <p class="text-xs font-bold uppercase tracking-widest">Analyzing Data...</p>
+                            </div>
+                        </div>
+
+                        <button class="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 relative z-10">
+                            <i data-lucide="sparkles" size="18"></i>
+                            Download Full Strategy
+                        </button>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="glass-card p-6 rounded-3xl shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
+                            <i data-lucide="arrow-right" size="16" class="text-indigo-600"></i>
+                            Recommended Actions
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-all group">
+                                <p class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">Increase SIP by 10%</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Beat inflation annually</p>
+                            </div>
+                            <div class="p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-all group">
+                                <p class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">Review Term Insurance</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Current cover: ₹0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        // Utility: Format Currency
+        const formatINR = (val) => new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 0
+        }).format(val);
+
+        // Fetch Data and Initialize
+        async function init() {
+            try {
+                const userResponse = await fetch('/api/user-data');
+                const userData = await userResponse.json();
+                
+                updateUI(userData);
+                renderCharts(userData);
+                fetchInsights(userData);
+                
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Initialization failed:", err);
+            }
+        }
+
+        function updateUI(data) {
+            document.getElementById('user-name').textContent = data.Name;
+            document.getElementById('user-email').textContent = data.email;
+            document.getElementById('user-initial').textContent = data.Name.charAt(0);
+
+            // Metrics
+            const metrics = [
+                { title: 'Monthly Income', value: formatINR(data.financials['monthly-income']), icon: 'wallet', color: 'text-blue-600' },
+                { title: 'Total Portfolio', value: formatINR(data.investments['invest-amt']), icon: 'trending-up', color: 'text-emerald-600' },
+                { title: 'Goal Target', value: formatINR(data.Goal['target-amt']), icon: 'target', color: 'text-purple-600' },
+                { title: 'Monthly Debt', value: formatINR(data.financials.debt), icon: 'alert-circle', color: 'text-rose-600' }
+            ];
+
+            const metricsGrid = document.getElementById('metrics-grid');
+            metricsGrid.innerHTML = metrics.map(m => `
+                <div class="glass-card p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-slate-50 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                            <i data-lucide="${m.icon}" class="${m.color}"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">${m.title}</h4>
+                    <div class="text-2xl font-extrabold text-slate-900 tracking-tight">${m.value}</div>
+                </div>
+            `).join('');
+
+            // Goal Progress
+            const progress = (data.investments['invest-amt'] / data.Goal['target-amt']) * 100;
+            document.getElementById('goal-title').textContent = `Goal: ${data.Goal.goal}`;
+            document.getElementById('goal-percent').textContent = `${Math.round(progress)}% Complete`;
+            document.getElementById('goal-target-amt').textContent = formatINR(data.Goal['target-amt']);
+            document.getElementById('goal-progress-bar').style.width = `${Math.min(100, progress)}%`;
+            document.getElementById('goal-status-text').innerHTML = `You have accumulated <span class="font-bold text-indigo-600">${formatINR(data.investments['invest-amt'])}</span>. You are on track for your ${data.Goal['target-time']} month target.`;
+        }
+
+        async function fetchInsights(data) {
+            const container = document.getElementById('insights-container');
+            try {
+                const response = await fetch('/api/insights', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const insights = await response.json();
+                
+                container.innerHTML = insights.map(insight => `
+                    <div class="group p-5 rounded-2xl border transition-all hover:bg-slate-800/50 ${
+                        insight.type === 'positive' ? 'bg-emerald-500/5 border-emerald-500/10' :
+                        insight.type === 'warning' ? 'bg-rose-500/5 border-rose-500/10' :
+                        'bg-indigo-500/5 border-indigo-500/10'
+                    }">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md ${
+                                insight.type === 'positive' ? 'bg-emerald-500/20 text-emerald-400' :
+                                insight.type === 'warning' ? 'bg-rose-500/20 text-rose-400' :
+                                'bg-indigo-500/20 text-indigo-400'
+                            }">${insight.category}</span>
+                            <span class="text-[10px] font-bold text-slate-500">${insight.impact} Impact</span>
+                        </div>
+                        <h4 class="text-sm font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">${insight.title}</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">${insight.description}</p>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-rose-400 text-xs font-bold">Failed to load AI insights.</p>`;
+            }
+        }
+
+        function renderCharts(data) {
+            renderPieChart(data);
+            renderSankeyChart(data);
+        }
+
+        function renderPieChart(data) {
+            const income = data.financials['monthly-income'];
+            const expenses = data.financials['monthly-expenses'];
+            const debt = data.financials.debt;
+            const surplus = Math.max(0, income - expenses - debt);
+
+            const pieData = [
+                { label: 'Expenses', value: expenses, color: '#f43f5e' },
+                { label: 'Debt', value: debt, color: '#f59e0b' },
+                { label: 'Surplus', value: surplus, color: '#10b981' }
+            ];
+
+            const width = 250, height = 250, radius = Math.min(width, height) / 2;
+            const svg = d3.select("#cash-flow-pie")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+            const pie = d3.pie().value(d => d.value).padAngle(0.05);
+            const arc = d3.arc().innerRadius(70).outerRadius(radius);
+
+            svg.selectAll("path")
+                .data(pie(pieData))
+                .enter()
+                .append("path")
+                .attr("d", arc)
+                .attr("fill", d => d.data.color)
+                .attr("stroke", "none");
+
+            const legend = document.getElementById('pie-legend');
+            legend.innerHTML = pieData.map(d => `
+                <div class="text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">${d.label}</p>
+                    <p class="text-sm font-bold" style="color: ${d.color}">${Math.round((d.value/income)*100)}%</p>
+                </div>
+            `).join('');
+        }
+
+        function renderSankeyChart(data) {
+            const income = data.financials['monthly-income'];
+            const expenses = data.financials['monthly-expenses'];
+            const debt = data.financials.debt;
+            const investment = data.investments['invest-amt'] / 12;
+            const surplus = Math.max(1, income - expenses - debt - investment);
+
+            const width = 700, height = 300;
+            const svg = d3.select("#sankey-chart")
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .style("width", "100%")
+                .style("height", "auto");
+
+            const sankeyData = {
+                nodes: [
+                    { name: "Income", color: "#4f46e5" },
+                    { name: "Expenses", color: "#f43f5e" },
+                    { name: "Debt", color: "#f59e0b" },
+                    { name: "Investments", color: "#10b981" },
+                    { name: "Surplus", color: "#6366f1" }
+                ],
+                links: [
+                    { source: 0, target: 1, value: expenses },
+                    { source: 0, target: 2, value: debt },
+                    { source: 0, target: 3, value: investment },
+                    { source: 0, target: 4, value: surplus }
+                ]
+            };
+
+            const sankeyGen = d3.sankey()
+                .nodeWidth(24)
+                .nodePadding(40)
+                .extent([[10, 10], [width - 10, height - 10]]);
+
+            const { nodes, links } = sankeyGen(sankeyData);
+
+            svg.append("g")
+                .selectAll("path")
+                .data(links)
+                .join("path")
+                .attr("class", "sankey-link")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .attr("stroke-width", d => Math.max(1, d.width));
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(nodes)
+                .join("g")
+                .attr("class", "sankey-node");
+
+            node.append("rect")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", d => d.color)
+                .attr("rx", 6);
+
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 10 : d.x0 - 10)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .text(d => `${d.name} (₹${Math.round(d.value/1000)}k)`);
+        }
+
+        init();
+    </script>
+</body>
+</html>
